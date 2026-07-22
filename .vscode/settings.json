@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/agy-telemetry/.venv/bin/python",
+  "terminal.integrated.defaultProfile.linux": "tmux-integrated",
+  "terminal.integrated.defaultProfile.osx": "tmux-integrated",
+  "terminal.integrated.defaultProfile.windows": "tmux-integrated"
+}

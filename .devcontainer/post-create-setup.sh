@@ -1,0 +1,107 @@
+#!/bin/bash
+# This file is executed once per session to set up the devcontainer.
+# For example:
+# echo "Running devcontainer setup script..."
+# npm install
+
+CURRENT_USER=$(whoami)
+USER_HOME_DIR="$HOME"
+
+echo "INFO: Ensuring wrangler directory permissions..."
+
+echo "INFO: Restoring or backing up SSH host keys..."
+sudo mkdir -p /var/lib/tailscale/ssh
+if [ -n "$(ls -A /var/lib/tailscale/ssh/ssh_host_* 2>/dev/null)" ]; then
+    echo "INFO: Restoring SSH host keys from /var/lib/tailscale/ssh..."
+    sudo cp -f /var/lib/tailscale/ssh/ssh_host_* /etc/ssh/
+    sudo chmod 600 /etc/ssh/ssh_host_*_key
+    sudo chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
+else
+    echo "INFO: Backing up SSH host keys to /var/lib/tailscale/ssh..."
+    sudo ssh-keygen -A || true
+    sudo cp -f /etc/ssh/ssh_host_* /var/lib/tailscale/ssh/
+fi
+
+echo "INFO: Ensuring SSH service is running..."
+sudo service ssh restart
+mkdir -p "$USER_HOME_DIR/.wrangler"
+sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.wrangler"
+
+echo "INFO: Ensuring doppler directory permissions..."
+mkdir -p "$USER_HOME_DIR/.doppler"
+sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.doppler"
+
+echo "INFO: Ensuring gemini directory permissions..."
+mkdir -p "$USER_HOME_DIR/.gemini"
+sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.gemini"
+
+
+echo "INFO: Creating Oh My Zsh custom directories..."
+mkdir -p "$USER_HOME_DIR/.oh-my-zsh/custom/themes" "$USER_HOME_DIR/.oh-my-zsh/custom/plugins"
+
+if [ -f "/workspaces/agy-telemetry/.devcontainer/.zshrc" ]; then
+    echo "INFO: Copying .zshrc to $USER_HOME_DIR/.zshrc"
+    cp "/workspaces/agy-telemetry/.devcontainer/.zshrc" "$USER_HOME_DIR/.zshrc"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.zshrc"
+else
+    echo "INFO: /workspaces/agy-telemetry/.devcontainer/.zshrc not found, skipping copy."
+fi
+
+if [ -f "/workspaces/agy-telemetry/.devcontainer/.p10k.zsh" ]; then
+    echo "INFO: Copying .p10k.zsh to $USER_HOME_DIR/.p10k.zsh"
+    cp "/workspaces/agy-telemetry/.devcontainer/.p10k.zsh" "$USER_HOME_DIR/.p10k.zsh"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.p10k.zsh"
+else
+    echo "INFO: /workspaces/agy-telemetry/.devcontainer/.p10k.zsh not found, skipping copy."
+fi
+
+if [ -f "/workspaces/agy-telemetry/.devcontainer/.tmux.conf" ]; then
+    echo "INFO: Copying .tmux.conf to $USER_HOME_DIR/.tmux.conf"
+    cp "/workspaces/agy-telemetry/.devcontainer/.tmux.conf" "$USER_HOME_DIR/.tmux.conf"
+    sudo chown "$CURRENT_USER:$CURRENT_USER" "$USER_HOME_DIR/.tmux.conf"
+else
+    echo "INFO: /workspaces/agy-telemetry/.devcontainer/.tmux.conf not found, skipping copy."
+fi
+
+echo "INFO: Installing uv tool..."
+curl -LsSf https://astral.sh/uv/install.sh | sudo env CARGO_HOME=/usr/local UV_INSTALL_DIR=/usr/local/bin sh
+
+echo "INFO: Installing Cursor CLI..."
+curl https://cursor.com/install -fsS | bash
+
+
+
+echo "INFO: Configuring git safe directory..."
+git config --global --add safe.directory /workspaces/agy-telemetry
+
+
+
+
+
+echo "INFO: Installing specdag globally..."
+npm install -g @japorto100/specdag
+
+if ! pgrep -f "socat TCP-LISTEN:9222" > /dev/null; then
+    echo "Setup bridget to access Chrome DevTools Protocol over a secure tunnel..."
+    sudo start-stop-daemon --start --background --pidfile /var/run/socat-9222.pid --make-pidfile --chuid node:node --exec /usr/bin/socat -- TCP-LISTEN:9222,fork,bind=127.0.0.1 TCP:host.docker.internal:9222
+fi
+
+echo "INFO: Checking Tailscale status..."
+if ! command -v tailscale &> /dev/null; then
+    echo "INFO: Installing Tailscale..."
+    curl -fsSL https://tailscale.com/install.sh | sh
+fi
+
+if ! pgrep -x tailscaled > /dev/null; then
+    echo "INFO: Starting Tailscale daemon..."
+    sudo start-stop-daemon --start --background --oknodo --pidfile /var/run/tailscaled.pid --make-pidfile --exec /usr/sbin/tailscaled -- --state=/var/lib/tailscale/tailscaled.state
+fi
+
+echo "INFO: Checking Nanobanana MCP installation..."
+if [ -f "webapp/scripts/install-nanobanana.sh" ]; then
+    bash webapp/scripts/install-nanobanana.sh
+elif [ -f "scripts/install-nanobanana.sh" ]; then
+    bash scripts/install-nanobanana.sh
+fi
+
+echo "INFO: Custom container setup script finished."
