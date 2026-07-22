@@ -11,17 +11,25 @@ This tool captures conversations, model responses, token usage, and tool executi
 - **Automated Trace Correlation:** Converts each `agy` conversation (identified by a UUID) into a single Trace ID, grouping all agent steps and tool calls under a single trace.
 - **OpenInference Compliance:** Maps prompts, model completions, token counts, and tool inputs/outputs to standard OpenInference attributes (like `llm.input_messages`, `llm.token_count.total`, and `tool.name`).
 - **Nested Agent Spans:** Groups LLM inference calls and tool executions chronologically as child spans of the main conversation chain.
-- **Duplicate Prevention Cache:** Caches previously exported step indexes in `/tmp/agy_telemetry_cache.json` so that only new steps and updated root tokens are pushed on each statusline refresh, minimizing network overhead.
+- **Duplicate Prevention Cache:** Caches previously exported step indexes in a temporary directory (e.g., `/tmp` on macOS/Linux, or `%TEMP%` on Windows) so that only new steps and updated root tokens are pushed on each statusline refresh, minimizing network overhead.
 - **Fail-safe Design:** Telemetry runs completely out-of-band and will never crash or interrupt your interactive `agy` session, even if the Phoenix server is offline.
 
 ---
 
 ## Quick Installation
 
-To install this telemetry hook on any of your development boxes (macOS, Linux, Windows, or Dev Containers), simply run:
+To install this telemetry hook on your development boxes:
 
+### macOS / Linux / Dev Containers
+Run this command in your terminal:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/install.py | python3
+```
+
+### Windows
+Run this command in your command prompt or terminal (using `python` instead of `python3`):
+```cmd
+curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/install.py | python
 ```
 
 This installer script will:
