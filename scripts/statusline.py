@@ -23,6 +23,9 @@ try:
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
+    class IdGenerator:
+        pass
+
 
 # Configurable telemetry endpoint
 DEFAULT_ENDPOINT = "http://nas:6006/v1/traces"
