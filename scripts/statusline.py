@@ -3,6 +3,10 @@ import json
 import os
 import datetime
 import hashlib
+import time
+import socket
+import urllib.parse
+
 
 # Prepend custom telemetry lib path containing OpenTelemetry SDK
 lib_path = os.path.expanduser("~/.gemini/antigravity-cli/telemetry_lib")
@@ -109,6 +113,51 @@ def main():
     last_sent_steps = cache.get("last_sent_steps") or {}
     last_sent_step = last_sent_steps.get(conversation_id, -1)
 
+    # Check if telemetry is cached as offline
+    offline_ts = cache.get("telemetry_offline_timestamp", 0)
+    if time.time() - offline_ts < 30:
+        print(f"{status_str} ┃ 📡 telemetry: offline")
+        return
+
+    # Check TCP connectivity to the Phoenix server
+    is_online = False
+    try:
+        parsed = urllib.parse.urlparse(ENDPOINT)
+        host = parsed.hostname
+        if not host:
+            host = "localhost"
+        port = parsed.port
+        if port is None:
+            port = 80 if parsed.scheme == "http" else 443
+            
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.2)  # 200ms timeout
+        s.connect((host, port))
+        s.close()
+        is_online = True
+    except Exception:
+        is_online = False
+        
+    if not is_online:
+        # Update cache to avoid retrying for the next 30 seconds
+        cache["telemetry_offline_timestamp"] = time.time()
+        try:
+            with open(cache_path, 'w') as cf:
+                json.dump(cache, cf)
+        except Exception:
+            pass
+        print(f"{status_str} ┃ 📡 telemetry: offline")
+        return
+
+    # Clean the offline timestamp from the cache if it is online
+    if "telemetry_offline_timestamp" in cache:
+        del cache["telemetry_offline_timestamp"]
+        try:
+            with open(cache_path, 'w') as cf:
+                json.dump(cache, cf)
+        except Exception:
+            pass
+
     # Load transcript steps
     steps = []
     try:
@@ -135,11 +184,12 @@ def main():
         resource = Resource(attributes={"service.name": "agy-cli"})
         id_generator = PresetIdGenerator()
         provider = TracerProvider(resource=resource, id_generator=id_generator)
-        exporter = OTLPSpanExporter(endpoint=ENDPOINT)
+        exporter = OTLPSpanExporter(endpoint=ENDPOINT, timeout=1.0)
         processor = SimpleSpanProcessor(exporter)
         provider.add_span_processor(processor)
         trace.set_tracer_provider(provider)
         tracer = trace.get_tracer("agy-telemetry-statusline")
+
     except Exception as e:
         with open("/tmp/agy_telemetry_error.log", "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] OTel Init error: {str(e)}\n")
