@@ -27,9 +27,11 @@ curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/insta
 ```
 
 ### Windows
-Run this command in your command prompt or terminal (using `python` instead of `python3`):
+Run these commands in your command prompt to download and execute the installer:
 ```cmd
-curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/install.py | python
+curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/install.py -o install.py
+python install.py
+del install.py
 ```
 
 This installer script will:
