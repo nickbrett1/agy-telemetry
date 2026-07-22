@@ -26,6 +26,7 @@ def main():
     
     # 2. Download statusline.py
     print(f"Downloading statusline script from {STATUSLINE_URL}...")
+    downloaded = False
     try:
         req = urllib.request.Request(
             STATUSLINE_URL,
@@ -37,8 +38,42 @@ def main():
         with open(statusline_path, 'w', encoding='utf-8') as f:
             f.write(code)
         print(f"Saved statusline script to {statusline_path}")
+        downloaded = True
     except Exception as e:
-        print(f"Error downloading statusline script: {e}")
+        print(f"urllib download failed ({e}). Attempting download using system curl...")
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["curl", "-fsSL", STATUSLINE_URL, "-o", statusline_path],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0 and os.path.exists(statusline_path) and os.path.getsize(statusline_path) > 0:
+                print(f"Saved statusline script via curl to {statusline_path}")
+                downloaded = True
+            else:
+                print(f"curl download failed with return code {result.returncode}. Stderr: {result.stderr}")
+        except Exception as curl_err:
+            print(f"Failed to run curl: {curl_err}")
+
+        if not downloaded:
+            print("Attempting download using system wget...")
+            try:
+                result = subprocess.run(
+                    ["wget", "-qO", statusline_path, STATUSLINE_URL],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0 and os.path.exists(statusline_path) and os.path.getsize(statusline_path) > 0:
+                    print(f"Saved statusline script via wget to {statusline_path}")
+                    downloaded = True
+                else:
+                    print(f"wget download failed with return code {result.returncode}. Stderr: {result.stderr}")
+            except Exception as wget_err:
+                print(f"Failed to run wget: {wget_err}")
+
+    if not downloaded:
+        print("Error: Could not download statusline script via urllib, curl, or wget.")
         sys.exit(1)
         
     # 3. Configure settings.json
