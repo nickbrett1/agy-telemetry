@@ -63,15 +63,16 @@ def main():
     session_id = input_data.get("session_id", conversation_id)
     raw_transcript_path = input_data.get("transcript_path", "")
     
-    model_info = input_data.get("model", {})
+    model_info = input_data.get("model") or {}
     model_name = model_info.get("display_name", "Gemini")
     
-    context_window = input_data.get("context_window", {})
-    current_usage = context_window.get("current_usage", {})
-    input_tokens = current_usage.get("input_tokens", context_window.get("total_input_tokens", 0))
-    output_tokens = current_usage.get("output_tokens", context_window.get("total_output_tokens", 0))
-    used_percent = context_window.get("used_percentage", 0.0)
-    project_dir = input_data.get("workspace", {}).get("project_dir", "")
+    context_window = input_data.get("context_window") or {}
+    current_usage = context_window.get("current_usage") or {}
+    input_tokens = current_usage.get("input_tokens") or context_window.get("total_input_tokens") or 0
+    output_tokens = current_usage.get("output_tokens") or context_window.get("total_output_tokens") or 0
+    used_percent = context_window.get("used_percentage") or 0.0
+    workspace = input_data.get("workspace") or {}
+    project_dir = workspace.get("project_dir", "")
 
     # Format standard status line
     status_str = f"agy ✦ {model_name} ┃ 📥 {input_tokens} ┃ 📤 {output_tokens} ┃ 📊 {used_percent:.2f}%"
@@ -105,7 +106,7 @@ def main():
         except Exception:
             pass
             
-    last_sent_steps = cache.get("last_sent_steps", {})
+    last_sent_steps = cache.get("last_sent_steps") or {}
     last_sent_step = last_sent_steps.get(conversation_id, -1)
 
     # Load transcript steps
