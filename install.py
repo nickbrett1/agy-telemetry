@@ -87,9 +87,11 @@ def main():
             print(f"Warning: Could not load existing settings.json ({e}). Creating a new one.")
             
     # Set statusLine
+    python_bin = "python" if sys.platform == "win32" else "python3"
+    statusline_cmd_path = statusline_path.replace(os.sep, "/")
     settings["statusLine"] = {
         "type": "command",
-        "command": f"python3 {statusline_path}"
+        "command": f"{python_bin} {statusline_cmd_path}"
     }
     
     try:

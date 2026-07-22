@@ -6,6 +6,7 @@ import hashlib
 import time
 import socket
 import urllib.parse
+import tempfile
 
 
 # Prepend custom telemetry lib path containing OpenTelemetry SDK
@@ -104,7 +105,8 @@ def main():
         return
 
     # Read cache to find last sent step
-    cache_path = "/tmp/agy_telemetry_cache.json"
+    cache_path = os.path.join(tempfile.gettempdir(), "agy_telemetry_cache.json")
+    error_log_path = os.path.join(tempfile.gettempdir(), "agy_telemetry_error.log")
     cache = {}
     if os.path.exists(cache_path):
         try:
@@ -173,7 +175,7 @@ def main():
                 except Exception:
                     continue
     except Exception as e:
-        with open("/tmp/agy_telemetry_error.log", "a") as f:
+        with open(error_log_path, "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] File read error: {str(e)}\n")
         print(f"{status_str} ┃ 📡 telemetry: err")
         return
@@ -194,7 +196,7 @@ def main():
         tracer = trace.get_tracer("agy-telemetry-statusline")
 
     except Exception as e:
-        with open("/tmp/agy_telemetry_error.log", "a") as f:
+        with open(error_log_path, "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] OTel Init error: {str(e)}\n")
         print(f"{status_str} ┃ 📡 telemetry: offline")
         return
@@ -207,7 +209,7 @@ def main():
         trace_id_int = int(trace_id_hex, 16)
         root_span_id_int = int(root_span_id_hex, 16)
     except Exception as e:
-        with open("/tmp/agy_telemetry_error.log", "a") as f:
+        with open(error_log_path, "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] UUID conversion error: {str(e)}\n")
         print(f"{status_str} ┃ 📡 telemetry: err")
         return
@@ -335,7 +337,7 @@ def main():
             
     except Exception as e:
         telemetry_status = "offline"
-        with open("/tmp/agy_telemetry_error.log", "a") as f:
+        with open(error_log_path, "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] Export error: {str(e)}\n")
 
     # Output formatted string for terminal TUI status line
