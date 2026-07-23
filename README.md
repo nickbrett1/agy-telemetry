@@ -42,6 +42,26 @@ This installer script will:
 
 ---
 
+## Uninstallation
+
+If you wish to remove the telemetry hook:
+
+### macOS / Linux / Dev Containers
+Run this command in your terminal:
+```bash
+curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/uninstall.py | python3
+```
+
+### Windows
+Run these commands in your command prompt:
+```cmd
+curl -fsSL https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/uninstall.py -o uninstall.py
+python uninstall.py
+del uninstall.py
+```
+
+---
+
 ## Configuration
 
 By default, the script sends OTLP traces to `http://nas:6006/v1/traces`.
