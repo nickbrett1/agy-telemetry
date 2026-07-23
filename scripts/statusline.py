@@ -6,7 +6,6 @@ import hashlib
 import time
 import socket
 import urllib.parse
-import tempfile
 
 
 # Prepend custom telemetry lib path containing OpenTelemetry SDK
@@ -105,8 +104,10 @@ def main():
         return
 
     # Read cache to find last sent step
-    cache_path = os.path.join(tempfile.gettempdir(), "agy_telemetry_cache.json")
-    error_log_path = os.path.join(tempfile.gettempdir(), "agy_telemetry_error.log")
+    secure_dir = os.path.expanduser("~/.gemini/antigravity-cli")
+    os.makedirs(secure_dir, exist_ok=True)
+    cache_path = os.path.join(secure_dir, "agy_telemetry_cache.json")
+    error_log_path = os.path.join(secure_dir, "agy_telemetry_error.log")
     cache = {}
     if os.path.exists(cache_path):
         try:
