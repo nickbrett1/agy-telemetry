@@ -29,7 +29,7 @@ except ImportError:
 
 
 # Configurable telemetry endpoint
-DEFAULT_ENDPOINT = "http://nas:6006/v1/traces"
+DEFAULT_ENDPOINT = "https://nas:6006/v1/traces"
 ENDPOINT = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", DEFAULT_ENDPOINT)
 
 class PresetIdGenerator(IdGenerator):
