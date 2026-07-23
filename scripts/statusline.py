@@ -251,11 +251,14 @@ def main():
         # 2. Send child spans for new steps
         last_user_input = None
         last_planner_response = None
+        max_step_index = 0
         
         for i, step in enumerate(steps):
             stype = step.get("type")
             ssource = step.get("source")
             sindex = step.get("step_index")
+            if sindex is not None and sindex > max_step_index:
+                max_step_index = sindex
             scontent = step.get("content", "")
             stime = iso_to_nanos(step.get("created_at"))
             
@@ -329,7 +332,6 @@ def main():
         provider.shutdown()
         
         # Update cache
-        max_step_index = max(s.get("step_index", 0) for s in steps)
         last_sent_steps[conversation_id] = max_step_index
         cache["last_sent_steps"] = last_sent_steps
         with open(cache_path, 'w') as cf:
