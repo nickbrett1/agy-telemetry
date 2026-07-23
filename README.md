@@ -44,7 +44,7 @@ This installer script will:
 
 ## Configuration
 
-By default, the script sends OTLP traces to `https://nas:6006/v1/traces`.
+By default, the script sends OTLP traces to `http://nas:6006/v1/traces`.
 
 If your Phoenix server runs on a different host, port, or cloud instance, you can override this endpoint by setting the `PHOENIX_COLLECTOR_ENDPOINT` environment variable in your shell configuration (e.g., `.bashrc`, `.zshrc`):
 
