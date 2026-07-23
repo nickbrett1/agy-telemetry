@@ -254,6 +254,28 @@ def main():
         id_generator.trace_id = trace_id_int
         id_generator.span_id = root_span_id_int
         
+        # Find root input and output for CHAIN span
+        root_input = ""
+        root_output = ""
+        for step in steps:
+            if step.get("type") == "USER_INPUT":
+                root_input = step.get("content", "")
+                break
+        if not root_input and steps:
+            root_input = steps[0].get("content", "")
+
+        for step in reversed(steps):
+            if step.get("type") == "PLANNER_RESPONSE" or step.get("source") == "MODEL":
+                root_output = step.get("content", "")
+                break
+        if not root_output and steps:
+            root_output = steps[-1].get("content", "")
+
+        if root_input is not None:
+            root_input = str(root_input)
+        if root_output is not None:
+            root_output = str(root_output)
+
         root_span = tracer.start_span(
             name=f"Conversation: {conversation_id[:8]}",
             start_time=first_step_time
@@ -265,6 +287,8 @@ def main():
         root_span.set_attribute("llm.token_count.completion", output_tokens)
         root_span.set_attribute("llm.token_count.total", input_tokens + output_tokens)
         root_span.set_attribute("workspace.project_dir", project_dir)
+        root_span.set_attribute("input.value", root_input)
+        root_span.set_attribute("output.value", root_output)
         root_span.end(end_time=last_step_time)
 
         # parent context helper for child spans
@@ -326,11 +350,14 @@ def main():
                     child_span.set_attribute("llm.output_messages.0.message.role", "assistant")
                     child_span.set_attribute("llm.output_messages.0.message.content", scontent)
                     
+                    ucontent = ""
                     if last_user_input:
                         ucontent = last_user_input.get("content", "")
                         child_span.set_attribute("llm.input_messages.0.message.role", "user")
                         child_span.set_attribute("llm.input_messages.0.message.content", ucontent)
                         
+                    child_span.set_attribute("input.value", str(ucontent) if ucontent is not None else "")
+                    child_span.set_attribute("output.value", str(scontent) if scontent is not None else "")
                     child_span.end(end_time=stime)
                     
             elif ssource == "MODEL" and stype not in ["PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"]:
@@ -360,6 +387,8 @@ def main():
                                 tool_input = json.dumps(tc.get("args", {}))
                                 break
                     tool_span.set_attribute("tool.input", tool_input)
+                    tool_span.set_attribute("input.value", tool_input)
+                    tool_span.set_attribute("output.value", str(scontent) if scontent is not None else "")
                     tool_span.end(end_time=stime)
 
         # Force flush and shutdown to ensure export
