@@ -39,7 +39,7 @@ def main():
             f.write(code)
         print(f"Saved statusline script to {statusline_path}")
         downloaded = True
-    except Exception as e:
+    except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"urllib download failed ({e}). Attempting download using system curl...")
         import subprocess
         try:
