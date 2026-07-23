@@ -257,7 +257,6 @@ def main():
             ssource = step.get("source")
             sindex = step.get("step_index")
             scontent = step.get("content", "")
-            stime = iso_to_nanos(step.get("created_at"))
             
             if stype == "USER_INPUT":
                 last_user_input = step
@@ -294,6 +293,7 @@ def main():
                         child_span.set_attribute("llm.input_messages.0.message.role", "user")
                         child_span.set_attribute("llm.input_messages.0.message.content", ucontent)
                         
+                    stime = iso_to_nanos(step.get("created_at"))
                     child_span.end(end_time=stime)
                     
             elif ssource == "MODEL" and stype not in ["PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"]:
@@ -323,6 +323,7 @@ def main():
                                 tool_input = json.dumps(tc.get("args", {}))
                                 break
                     tool_span.set_attribute("tool.input", tool_input)
+                    stime = iso_to_nanos(step.get("created_at"))
                     tool_span.end(end_time=stime)
 
         # Force flush and shutdown to ensure export
