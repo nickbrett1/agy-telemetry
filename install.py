@@ -88,7 +88,16 @@ def main():
             
     # Set statusLine
     python_bin = "python" if sys.platform == "win32" else "python3"
-    statusline_cmd_path = statusline_path.replace(os.sep, "/")
+    if sys.platform == "win32":
+        statusline_cmd_path = statusline_path.replace(os.sep, "/")
+    else:
+        # Use ~ for home directory to ensure compatibility across different container users
+        try:
+            rel_path = os.path.relpath(statusline_path, home)
+            statusline_cmd_path = f"~/{rel_path}".replace(os.sep, "/")
+        except ValueError:
+            statusline_cmd_path = statusline_path.replace(os.sep, "/")
+
     settings["statusLine"] = {
         "type": "command",
         "command": f"{python_bin} {statusline_cmd_path}"
