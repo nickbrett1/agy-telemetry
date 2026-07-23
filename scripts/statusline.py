@@ -117,6 +117,11 @@ def main():
             
     last_sent_steps = cache.get("last_sent_steps") or {}
     last_sent_step = last_sent_steps.get(conversation_id, -1)
+    last_tokens_info = (cache.get("last_token_counts") or {}).get(conversation_id) or {}
+    last_input_tokens = last_tokens_info.get("input_tokens", 0)
+    last_output_tokens = last_tokens_info.get("output_tokens", 0)
+    delta_input = max(0, input_tokens - last_input_tokens)
+    delta_output = max(0, output_tokens - last_output_tokens)
 
     # Check if telemetry is cached as offline
     offline_ts = cache.get("telemetry_offline_timestamp", 0)
@@ -289,6 +294,9 @@ def main():
                     child_span.set_attribute("openinference.span.kind", "LLM")
                     child_span.set_attribute("llm.model_name", model_name)
                     child_span.set_attribute("llm.provider", "google")
+                    child_span.set_attribute("llm.token_count.prompt", delta_input)
+                    child_span.set_attribute("llm.token_count.completion", delta_output)
+                    child_span.set_attribute("llm.token_count.total", delta_input + delta_output)
                     child_span.set_attribute("llm.output_messages.0.message.role", "assistant")
                     child_span.set_attribute("llm.output_messages.0.message.content", scontent)
                     
@@ -334,6 +342,12 @@ def main():
         # Update cache
         last_sent_steps[conversation_id] = max_step_index
         cache["last_sent_steps"] = last_sent_steps
+        if "last_token_counts" not in cache:
+            cache["last_token_counts"] = {}
+        cache["last_token_counts"][conversation_id] = {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens
+        }
         with open(cache_path, 'w') as cf:
             json.dump(cache, cf)
             
