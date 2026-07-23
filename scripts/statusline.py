@@ -17,7 +17,7 @@ if os.path.exists(lib_path) and lib_path not in sys.path:
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider, IdGenerator
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor, BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.trace import SpanContext, TraceFlags, NonRecordingSpan
@@ -115,11 +115,29 @@ def main():
         except Exception:
             pass
             
+    try:
+        input_tokens = int(input_tokens)
+    except (TypeError, ValueError):
+        input_tokens = 0
+    try:
+        output_tokens = int(output_tokens)
+    except (TypeError, ValueError):
+        output_tokens = 0
+
     last_sent_steps = cache.get("last_sent_steps") or {}
     last_sent_step = last_sent_steps.get(conversation_id, -1)
     last_tokens_info = (cache.get("last_token_counts") or {}).get(conversation_id) or {}
     last_input_tokens = last_tokens_info.get("input_tokens", 0)
     last_output_tokens = last_tokens_info.get("output_tokens", 0)
+    try:
+        last_input_tokens = int(last_input_tokens)
+    except (TypeError, ValueError):
+        last_input_tokens = 0
+    try:
+        last_output_tokens = int(last_output_tokens)
+    except (TypeError, ValueError):
+        last_output_tokens = 0
+
     delta_input = max(0, input_tokens - last_input_tokens)
     delta_output = max(0, output_tokens - last_output_tokens)
 
@@ -129,24 +147,32 @@ def main():
         print(f"{status_str} ┃ 📡 telemetry: offline")
         return
 
-    # Check TCP connectivity to the Phoenix server
+    # Check TCP connectivity to the Phoenix server in a background thread to prevent DNS hangs
     is_online = False
-    try:
-        parsed = urllib.parse.urlparse(ENDPOINT)
-        host = parsed.hostname
-        if not host:
-            host = "localhost"
-        port = parsed.port
-        if port is None:
-            port = 80 if parsed.scheme == "http" else 443
-            
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.2)  # 200ms timeout
-        s.connect((host, port))
-        s.close()
-        is_online = True
-    except Exception:
-        is_online = False
+    def check_connection():
+        nonlocal is_online
+        try:
+            parsed = urllib.parse.urlparse(ENDPOINT)
+            host = parsed.hostname
+            if not host:
+                host = "localhost"
+            port = parsed.port
+            if port is None:
+                port = 80 if parsed.scheme == "http" else 443
+                
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.2)  # 200ms timeout
+            s.connect((host, port))
+            s.close()
+            is_online = True
+        except Exception:
+            is_online = False
+
+    import threading
+    t = threading.Thread(target=check_connection)
+    t.daemon = True
+    t.start()
+    t.join(timeout=0.2)
         
     if not is_online:
         # Update cache to avoid retrying for the next 30 seconds
@@ -194,8 +220,8 @@ def main():
         resource = Resource(attributes={"service.name": "agy-cli"})
         id_generator = PresetIdGenerator()
         provider = TracerProvider(resource=resource, id_generator=id_generator)
-        exporter = OTLPSpanExporter(endpoint=ENDPOINT, timeout=1.0)
-        processor = SimpleSpanProcessor(exporter)
+        exporter = OTLPSpanExporter(endpoint=ENDPOINT, timeout=0.5)
+        processor = BatchSpanProcessor(exporter)
         provider.add_span_processor(processor)
         trace.set_tracer_provider(provider)
         tracer = trace.get_tracer("agy-telemetry-statusline")
@@ -355,6 +381,13 @@ def main():
         telemetry_status = "offline"
         with open(error_log_path, "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] Export error: {str(e)}\n")
+        # Cache the failure to avoid blocking on subsequent prompts
+        cache["telemetry_offline_timestamp"] = time.time()
+        try:
+            with open(cache_path, 'w') as cf:
+                json.dump(cache, cf)
+        except Exception:
+            pass
 
     # Output formatted string for terminal TUI status line
     print(f"{status_str} ┃ 📡 telemetry: {telemetry_status}")
