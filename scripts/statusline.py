@@ -289,6 +289,14 @@ def main():
         root_span.set_attribute("workspace.project_dir", project_dir)
         root_span.set_attribute("input.value", root_input)
         root_span.set_attribute("output.value", root_output)
+        root_span.set_attribute("input.mime_type", "text/plain")
+        root_span.set_attribute("output.mime_type", "text/plain")
+
+        # Set span error status if any step in the conversation failed
+        root_status_error = any(step.get("status") == "ERROR" for step in steps)
+        if root_status_error:
+            root_span.set_status(trace.StatusCode.ERROR, description="Conversation contained step failures")
+
         root_span.end(end_time=last_step_time)
 
         # parent context helper for child spans
@@ -358,6 +366,21 @@ def main():
                         
                     child_span.set_attribute("input.value", str(ucontent) if ucontent is not None else "")
                     child_span.set_attribute("output.value", str(scontent) if scontent is not None else "")
+                    child_span.set_attribute("input.mime_type", "text/plain")
+                    child_span.set_attribute("output.mime_type", "text/plain")
+
+                    # Add invocation parameters if present in model info
+                    invocation_params = {k: v for k, v in model_info.items() if k not in ["display_name", "model_id"]}
+                    if invocation_params:
+                        try:
+                            child_span.set_attribute("llm.invocation_parameters", json.dumps(invocation_params))
+                        except Exception:
+                            pass
+
+                    # Set error status if step failed
+                    if step.get("status") == "ERROR":
+                        child_span.set_status(trace.StatusCode.ERROR, description="LLM inference step failed")
+
                     child_span.end(end_time=stime)
                     
             elif ssource == "MODEL" and stype not in ["PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"]:
@@ -389,6 +412,13 @@ def main():
                     tool_span.set_attribute("tool.input", tool_input)
                     tool_span.set_attribute("input.value", tool_input)
                     tool_span.set_attribute("output.value", str(scontent) if scontent is not None else "")
+                    tool_span.set_attribute("input.mime_type", "application/json")
+                    tool_span.set_attribute("output.mime_type", "text/plain")
+
+                    # Set error status if step failed
+                    if step.get("status") == "ERROR":
+                        tool_span.set_status(trace.StatusCode.ERROR, description="Tool execution failed")
+
                     tool_span.end(end_time=stime)
 
         # Force flush and shutdown to ensure export
