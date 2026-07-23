@@ -124,28 +124,36 @@ def main():
         print(f"{status_str} ┃ 📡 telemetry: offline")
         return
 
-    # Check TCP connectivity to the Phoenix server
+    # Check if telemetry is cached as online
+    online_ts = cache.get("telemetry_online_timestamp", 0)
     is_online = False
-    try:
-        parsed = urllib.parse.urlparse(ENDPOINT)
-        host = parsed.hostname
-        if not host:
-            host = "localhost"
-        port = parsed.port
-        if port is None:
-            port = 80 if parsed.scheme == "http" else 443
-            
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.2)  # 200ms timeout
-        s.connect((host, port))
-        s.close()
+
+    if time.time() - online_ts < 60:
         is_online = True
-    except Exception:
-        is_online = False
-        
+    else:
+        # Check TCP connectivity to the Phoenix server
+        try:
+            parsed = urllib.parse.urlparse(ENDPOINT)
+            host = parsed.hostname
+            if not host:
+                host = "localhost"
+            port = parsed.port
+            if port is None:
+                port = 80 if parsed.scheme == "http" else 443
+
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.2)  # 200ms timeout
+            s.connect((host, port))
+            s.close()
+            is_online = True
+        except Exception:
+            is_online = False
+
     if not is_online:
         # Update cache to avoid retrying for the next 30 seconds
         cache["telemetry_offline_timestamp"] = time.time()
+        if "telemetry_online_timestamp" in cache:
+            del cache["telemetry_online_timestamp"]
         try:
             with open(cache_path, 'w') as cf:
                 json.dump(cache, cf)
@@ -154,9 +162,11 @@ def main():
         print(f"{status_str} ┃ 📡 telemetry: offline")
         return
 
-    # Clean the offline timestamp from the cache if it is online
-    if "telemetry_offline_timestamp" in cache:
-        del cache["telemetry_offline_timestamp"]
+    # Clean the offline timestamp from the cache if it is online, and update online timestamp
+    if "telemetry_offline_timestamp" in cache or time.time() - online_ts >= 60:
+        if "telemetry_offline_timestamp" in cache:
+            del cache["telemetry_offline_timestamp"]
+        cache["telemetry_online_timestamp"] = time.time()
         try:
             with open(cache_path, 'w') as cf:
                 json.dump(cache, cf)
@@ -337,6 +347,15 @@ def main():
             
     except Exception as e:
         telemetry_status = "offline"
+        # Update cache to mark as offline
+        cache["telemetry_offline_timestamp"] = time.time()
+        if "telemetry_online_timestamp" in cache:
+            del cache["telemetry_online_timestamp"]
+        try:
+            with open(cache_path, 'w') as cf:
+                json.dump(cache, cf)
+        except Exception:
+            pass
         with open(error_log_path, "a") as f:
             f.write(f"[{datetime.datetime.now().isoformat()}] Export error: {str(e)}\n")
 
