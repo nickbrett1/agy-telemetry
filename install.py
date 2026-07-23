@@ -3,6 +3,7 @@ import sys
 import json
 import urllib.request
 import urllib.error
+import subprocess
 
 STATUSLINE_URL = "https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/scripts/statusline.py"
 
@@ -41,7 +42,6 @@ def main():
         downloaded = True
     except Exception as e:
         print(f"urllib download failed ({e}). Attempting download using system curl...")
-        import subprocess
         try:
             result = subprocess.run(
                 ["curl", "-fsSL", STATUSLINE_URL, "-o", statusline_path],
