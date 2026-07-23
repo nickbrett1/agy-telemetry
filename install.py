@@ -5,6 +5,24 @@ import urllib.request
 
 STATUSLINE_URL = "https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/scripts/statusline.py"
 
+def _download_via_cli(cmd, tool_name, statusline_path):
+    import subprocess
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0 and os.path.exists(statusline_path) and os.path.getsize(statusline_path) > 0:
+            print(f"Saved statusline script via {tool_name} to {statusline_path}")
+            return True
+        else:
+            print(f"{tool_name} download failed with return code {result.returncode}. Stderr: {result.stderr}")
+    except Exception as err:
+        print(f"Failed to run {tool_name}: {err}")
+    return False
+
+
 def main():
     print("Installing agy telemetry integration...")
     
@@ -40,36 +58,19 @@ def main():
         downloaded = True
     except Exception as e:
         print(f"urllib download failed ({e}). Attempting download using system curl...")
-        import subprocess
-        try:
-            result = subprocess.run(
-                ["curl", "-fsSL", STATUSLINE_URL, "-o", statusline_path],
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0 and os.path.exists(statusline_path) and os.path.getsize(statusline_path) > 0:
-                print(f"Saved statusline script via curl to {statusline_path}")
-                downloaded = True
-            else:
-                print(f"curl download failed with return code {result.returncode}. Stderr: {result.stderr}")
-        except Exception as curl_err:
-            print(f"Failed to run curl: {curl_err}")
+        downloaded = _download_via_cli(
+            ["curl", "-fsSL", STATUSLINE_URL, "-o", statusline_path],
+            "curl",
+            statusline_path
+        )
 
         if not downloaded:
             print("Attempting download using system wget...")
-            try:
-                result = subprocess.run(
-                    ["wget", "-qO", statusline_path, STATUSLINE_URL],
-                    capture_output=True,
-                    text=True
-                )
-                if result.returncode == 0 and os.path.exists(statusline_path) and os.path.getsize(statusline_path) > 0:
-                    print(f"Saved statusline script via wget to {statusline_path}")
-                    downloaded = True
-                else:
-                    print(f"wget download failed with return code {result.returncode}. Stderr: {result.stderr}")
-            except Exception as wget_err:
-                print(f"Failed to run wget: {wget_err}")
+            downloaded = _download_via_cli(
+                ["wget", "-qO", statusline_path, STATUSLINE_URL],
+                "wget",
+                statusline_path
+            )
 
     if not downloaded:
         print("Error: Could not download statusline script via urllib, curl, or wget.")
