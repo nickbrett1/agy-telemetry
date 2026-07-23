@@ -111,6 +111,25 @@ def main():
         print(f"Error writing to settings.json: {e}")
         sys.exit(1)
         
+    # 4. Install dependencies to telemetry_lib
+    lib_path = os.path.join(target_dir, "telemetry_lib")
+    print(f"Installing OpenTelemetry dependencies to {lib_path}...")
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--target", lib_path, "opentelemetry-sdk", "opentelemetry-exporter-otlp"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            print("Successfully installed OpenTelemetry dependencies!")
+        else:
+            print(f"Warning: pip install failed with code {result.returncode}. Stderr: {result.stderr}")
+            print("Trying pip install --user instead...")
+            subprocess.run([sys.executable, "-m", "pip", "install", "opentelemetry-sdk", "opentelemetry-exporter-otlp"])
+    except Exception as e:
+        print(f"Warning: Could not install dependencies automatically ({e}). Please run: pip install opentelemetry-sdk opentelemetry-exporter-otlp")
+
     print("\nInstallation successful! 🎉")
     print("Telemetry is now configured to push traces to Arize Phoenix running on 'nas:6006'.")
     print("To verify, run: agy")
