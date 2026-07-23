@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import urllib.request
-import urllib.error
 
 STATUSLINE_URL = "https://raw.githubusercontent.com/nickbrett1/agy-telemetry/main/scripts/statusline.py"
 
