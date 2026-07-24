@@ -47,9 +47,9 @@ def _install_dependencies(lib_path):
     """
     Try several strategies to install dependencies, in order:
       1. pip install --target <lib_path>  (normal HTTPS)
-      2. pip install --target <lib_path> --trusted-host (bypass SSL)
+      2. pip install --target --index-url http://  (no SSL needed - for macOS with broken SSL)
       3. pip install --user  (system-wide, normal HTTPS)
-      4. pip install --user --trusted-host (bypass SSL)
+      4. pip install --user --index-url http://  (no SSL needed)
     Returns True if any strategy succeeded.
     """
     print(f"Installing OpenTelemetry dependencies to {lib_path}...")
@@ -58,15 +58,16 @@ def _install_dependencies(lib_path):
     if _pip_install(["--target", lib_path] + PACKAGES, "targeted"):
         return True
 
-    print("Standard install failed. Trying with --trusted-host to work around SSL issues...")
-
-    # Strategy 2: bypass SSL verification (common on macOS when OpenSSL isn't linked)
-    trusted_flags = [
+    # Strategy 2: HTTP index (no SSL module required - common macOS fix when python3
+    # is the Xcode CLI tools version which has no SSL compiled in)
+    print("Standard install failed (likely SSL not available in this Python).")
+    print("Trying HTTP index URL as fallback (no SSL required)...")
+    http_flags = [
+        "--index-url", "http://pypi.org/simple/",
         "--trusted-host", "pypi.org",
-        "--trusted-host", "pypi.python.org",
         "--trusted-host", "files.pythonhosted.org",
     ]
-    if _pip_install(["--target", lib_path] + trusted_flags + PACKAGES, "targeted + trusted-host"):
+    if _pip_install(["--target", lib_path] + http_flags + PACKAGES, "targeted + http index"):
         return True
 
     print("Targeted install failed. Trying system-wide pip install --user...")
@@ -76,10 +77,10 @@ def _install_dependencies(lib_path):
         print("  Note: packages installed to user site-packages. Telemetry will use system Python path.")
         return True
 
-    print("Trying system-wide pip install --user with --trusted-host...")
+    print("Trying system-wide pip install --user with HTTP index...")
 
-    # Strategy 4: user install + bypass SSL
-    if _pip_install(["--user"] + trusted_flags + PACKAGES, "--user + trusted-host"):
+    # Strategy 4: user install + HTTP index
+    if _pip_install(["--user"] + http_flags + PACKAGES, "--user + http index"):
         print("  Note: packages installed to user site-packages. Telemetry will use system Python path.")
         return True
 

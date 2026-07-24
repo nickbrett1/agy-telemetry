@@ -20,7 +20,7 @@ def test_file_read_error_logging(capsys):
         "model": {"display_name": "TestModel"},
     }
 
-    error_log_path = os.path.join(tempfile.gettempdir(), "agy_telemetry_error.log")
+    error_log_path = os.path.join(os.path.expanduser("~"), ".gemini", "antigravity-cli", "agy_telemetry_error.log")
 
     with patch('sys.stdin.read', return_value=json.dumps(input_data)):
         with patch('os.path.exists', return_value=True):
