@@ -104,4 +104,18 @@ elif [ -f "scripts/install-nanobanana.sh" ]; then
     bash scripts/install-nanobanana.sh
 fi
 
+# Setup python virtual environment and install dependencies
+if [ ! -d ".venv" ]; then
+    echo "INFO: Creating Python virtual environment (.venv)..."
+    python3 -m venv .venv
+fi
+
+if [ -f "requirements.txt" ]; then
+    echo "INFO: Installing dependencies from requirements.txt..."
+    .venv/bin/pip install -r requirements.txt
+elif [ -f "pyproject.toml" ]; then
+    echo "INFO: Installing dependencies from pyproject.toml..."
+    .venv/bin/pip install -e .
+fi
+
 echo "INFO: Custom container setup script finished."
