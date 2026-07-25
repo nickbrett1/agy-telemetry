@@ -31,6 +31,6 @@ __pycache__/
 .venv
 venv/
 *.manifest
-
+*.egg-info
 
 
