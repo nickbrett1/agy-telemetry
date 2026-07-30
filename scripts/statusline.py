@@ -113,7 +113,7 @@ def main():
         try:
             with open(cache_path, 'r') as cf:
                 cache = json.load(cf)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             pass
             
     try:
@@ -181,7 +181,7 @@ def main():
         try:
             with open(cache_path, 'w') as cf:
                 json.dump(cache, cf)
-        except Exception:
+        except OSError:
             pass
         print(f"{status_str} ┃ 📡 telemetry: offline")
         return
@@ -192,7 +192,7 @@ def main():
         try:
             with open(cache_path, 'w') as cf:
                 json.dump(cache, cf)
-        except Exception:
+        except OSError:
             pass
 
     # Load transcript steps
@@ -446,7 +446,7 @@ def main():
         try:
             with open(cache_path, 'w') as cf:
                 json.dump(cache, cf)
-        except Exception:
+        except OSError:
             pass
 
     # Output formatted string for terminal TUI status line
