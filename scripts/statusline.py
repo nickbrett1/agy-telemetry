@@ -39,14 +39,14 @@ class PresetIdGenerator(IdGenerator):
     def generate_trace_id(self) -> int:
         if self.trace_id is not None:
             return self.trace_id
-        import random
-        return random.getrandbits(128)
+        import secrets
+        return secrets.randbits(128)
         
     def generate_span_id(self) -> int:
         if self.span_id is not None:
             return self.span_id
-        import random
-        return random.getrandbits(64)
+        import secrets
+        return secrets.randbits(64)
 
 def iso_to_nanos(iso_str):
     if not iso_str:

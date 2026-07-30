@@ -59,8 +59,9 @@ def test_install_download_failure(mock_exit, mock_subprocess, mock_urlopen, mock
     mock_expanduser.return_value = '/home/user'
     mock_exists.return_value = False
 
-    # Simulate urllib failure
-    mock_urlopen.side_effect = Exception("Connection Error")
+    # Simulate urllib failure (needs to be an exception caught in try block)
+    import urllib.error
+    mock_urlopen.side_effect = urllib.error.URLError("Connection Error")
 
     # Simulate curl and wget failures
     failed_result = MagicMock()
