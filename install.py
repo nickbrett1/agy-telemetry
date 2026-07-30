@@ -66,7 +66,7 @@ def _install_dependencies(lib_path):
     return False
 
 
-def _get_target_directory(home):
+def _get_target_dir(home):
     cli_dir = os.path.join(home, ".gemini", "antigravity-cli")
     alt_dir = os.path.join(home, ".gemini", "antigravity")
 
@@ -79,7 +79,7 @@ def _get_target_directory(home):
     return target_dir
 
 
-def _download_statusline_script(statusline_path):
+def _download_statusline(statusline_path):
     print(f"Downloading statusline script from {STATUSLINE_URL}...")
     downloaded = False
     try:
@@ -153,12 +153,12 @@ def main():
 
     # 1. Locate settings directory
     home = os.path.expanduser("~")
-    target_dir = _get_target_directory(home)
+    target_dir = _get_target_dir(home)
     settings_path = os.path.join(target_dir, "settings.json")
     statusline_path = os.path.join(target_dir, "statusline.py")
 
     # 2. Download statusline.py
-    _download_statusline_script(statusline_path)
+    _download_statusline(statusline_path)
 
     # 3. Configure settings.json
     python_bin = "python" if sys.platform == "win32" else "python3"
@@ -168,6 +168,7 @@ def main():
     lib_path = os.path.join(target_dir, "telemetry_lib")
     deps_ok = _install_dependencies(lib_path)
 
+    python_bin = "python" if sys.platform == "win32" else "python3"
     if deps_ok:
         print("\nInstallation successful! 🎉")
         print("Telemetry is now configured to push traces to Arize Phoenix running on 'nas:6006'.")
