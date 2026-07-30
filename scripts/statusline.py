@@ -317,6 +317,15 @@ def main():
         last_planner_response = None
         max_step_index = 0
         
+        # Pre-compute invocation parameters once outside the loop
+        invocation_params = {k: v for k, v in model_info.items() if k not in ["display_name", "model_id"]}
+        invocation_params_json = None
+        if invocation_params:
+            try:
+                invocation_params_json = json.dumps(invocation_params)
+            except Exception:
+                pass
+
         for i, step in enumerate(steps):
             stype = step.get("type")
             ssource = step.get("source")
@@ -371,12 +380,8 @@ def main():
                     child_span.set_attribute("output.mime_type", "text/plain")
 
                     # Add invocation parameters if present in model info
-                    invocation_params = {k: v for k, v in model_info.items() if k not in ["display_name", "model_id"]}
-                    if invocation_params:
-                        try:
-                            child_span.set_attribute("llm.invocation_parameters", json.dumps(invocation_params))
-                        except Exception:
-                            pass
+                    if invocation_params_json is not None:
+                        child_span.set_attribute("llm.invocation_parameters", invocation_params_json)
 
                     # Set error status if step failed
                     if step.get("status") == "ERROR":
