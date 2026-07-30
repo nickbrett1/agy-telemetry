@@ -47,9 +47,7 @@ def _install_dependencies(lib_path):
     """
     Try several strategies to install dependencies, in order:
       1. pip install --target <lib_path>  (normal HTTPS)
-      2. pip install --target --index-url http://  (no SSL needed - for macOS with broken SSL)
-      3. pip install --user  (system-wide, normal HTTPS)
-      4. pip install --user --index-url http://  (no SSL needed)
+      2. pip install --user  (system-wide, normal HTTPS)
     Returns True if any strategy succeeded.
     """
     print(f"Installing OpenTelemetry dependencies to {lib_path}...")
@@ -58,29 +56,10 @@ def _install_dependencies(lib_path):
     if _pip_install(["--target", lib_path] + PACKAGES, "targeted"):
         return True
 
-    # Strategy 2: HTTP index (no SSL module required - common macOS fix when python3
-    # is the Xcode CLI tools version which has no SSL compiled in)
-    print("Standard install failed (likely SSL not available in this Python).")
-    print("Trying HTTP index URL as fallback (no SSL required)...")
-    http_flags = [
-        "--index-url", "http://pypi.org/simple/",
-        "--trusted-host", "pypi.org",
-        "--trusted-host", "files.pythonhosted.org",
-    ]
-    if _pip_install(["--target", lib_path] + http_flags + PACKAGES, "targeted + http index"):
-        return True
-
     print("Targeted install failed. Trying system-wide pip install --user...")
 
-    # Strategy 3: user install (no --target, goes to site-packages)
+    # Strategy 2: user install (no --target, goes to site-packages)
     if _pip_install(["--user"] + PACKAGES, "--user"):
-        print("  Note: packages installed to user site-packages. Telemetry will use system Python path.")
-        return True
-
-    print("Trying system-wide pip install --user with HTTP index...")
-
-    # Strategy 4: user install + HTTP index
-    if _pip_install(["--user"] + http_flags + PACKAGES, "--user + http index"):
         print("  Note: packages installed to user site-packages. Telemetry will use system Python path.")
         return True
 
@@ -189,7 +168,6 @@ def main():
         print("   To fix, try one of the following commands manually:")
         print(f"     {python_bin} -m pip install --target {lib_path} opentelemetry-sdk opentelemetry-exporter-otlp")
         print(f"     {python_bin} -m pip install --user opentelemetry-sdk opentelemetry-exporter-otlp")
-        print("   If you see SSL errors, try adding: --trusted-host pypi.org --trusted-host files.pythonhosted.org")
         print("\n   The status line and settings.json have been configured — only telemetry export is affected.")
 
 
