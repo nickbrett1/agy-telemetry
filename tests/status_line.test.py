@@ -13,7 +13,8 @@ sys.modules["statusline_script"] = statusline
 spec.loader.exec_module(statusline)
 main = statusline.main
 
-def test_file_read_error_logging(capsys):
+@patch('os.makedirs')
+def test_file_read_error_logging(mock_makedirs, capsys):
     input_data = {
         "conversation_id": "test-123",
         "transcript_path": "/tmp/transcript.jsonl",

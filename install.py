@@ -87,11 +87,7 @@ def _install_dependencies(lib_path):
     return False
 
 
-def main():
-    print("Installing agy telemetry integration...")
-
-    # 1. Locate settings directory
-    home = os.path.expanduser("~")
+def _get_target_directory(home):
     cli_dir = os.path.join(home, ".gemini", "antigravity-cli")
     alt_dir = os.path.join(home, ".gemini", "antigravity")
 
@@ -101,11 +97,10 @@ def main():
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir, exist_ok=True)
+    return target_dir
 
-    settings_path = os.path.join(target_dir, "settings.json")
-    statusline_path = os.path.join(target_dir, "statusline.py")
 
-    # 2. Download statusline.py
+def _download_statusline_script(statusline_path):
     print(f"Downloading statusline script from {STATUSLINE_URL}...")
     downloaded = False
     try:
@@ -140,7 +135,8 @@ def main():
         print("Error: Could not download statusline script via urllib, curl, or wget.")
         sys.exit(1)
 
-    # 3. Configure settings.json
+
+def _configure_settings(settings_path, statusline_path, home, python_bin):
     print(f"Configuring {settings_path}...")
     settings = {}
     if os.path.exists(settings_path):
@@ -150,12 +146,9 @@ def main():
         except Exception as e:
             print(f"Warning: Could not load existing settings.json ({e}). Creating a new one.")
 
-    # Set statusLine
-    python_bin = "python" if sys.platform == "win32" else "python3"
     if sys.platform == "win32":
         statusline_cmd_path = statusline_path.replace(os.sep, "/")
     else:
-        # Use ~ for home directory to ensure compatibility across different container users
         try:
             rel_path = os.path.relpath(statusline_path, home)
             statusline_cmd_path = f"~/{rel_path}".replace(os.sep, "/")
@@ -174,6 +167,23 @@ def main():
     except Exception as e:
         print(f"Error writing to settings.json: {e}")
         sys.exit(1)
+
+
+def main():
+    print("Installing agy telemetry integration...")
+
+    # 1. Locate settings directory
+    home = os.path.expanduser("~")
+    target_dir = _get_target_directory(home)
+    settings_path = os.path.join(target_dir, "settings.json")
+    statusline_path = os.path.join(target_dir, "statusline.py")
+
+    # 2. Download statusline.py
+    _download_statusline_script(statusline_path)
+
+    # 3. Configure settings.json
+    python_bin = "python" if sys.platform == "win32" else "python3"
+    _configure_settings(settings_path, statusline_path, home, python_bin)
 
     # 4. Install OpenTelemetry dependencies
     lib_path = os.path.join(target_dir, "telemetry_lib")
