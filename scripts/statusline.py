@@ -403,8 +403,11 @@ def update_cache(cache, cache_path, conversation_id, max_step_index, input_token
         "input_tokens": input_tokens,
         "output_tokens": output_tokens
     }
-    with open(cache_path, 'w') as cf:
-        json.dump(cache, cf)
+    try:
+        with open(cache_path, 'w') as cf:
+            json.dump(cache, cf)
+    except OSError:
+        pass
 
 def main():
     input_data = read_input_data()
