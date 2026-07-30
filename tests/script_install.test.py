@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, mock_open, MagicMock
 import sys
 import os
+import urllib.error
 
 # Get the absolute path to the directory containing this file
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +61,7 @@ def test_install_download_failure(mock_exit, mock_subprocess, mock_urlopen, mock
     mock_exists.return_value = False
 
     # Simulate urllib failure
-    mock_urlopen.side_effect = Exception("Connection Error")
+    mock_urlopen.side_effect = urllib.error.URLError("Connection Error")
 
     # Simulate curl and wget failures
     failed_result = MagicMock()
