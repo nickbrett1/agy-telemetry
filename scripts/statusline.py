@@ -16,7 +16,7 @@ if os.path.exists(lib_path) and lib_path not in sys.path:
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider, IdGenerator
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor, BatchSpanProcessor
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.trace import SpanContext, TraceFlags, NonRecordingSpan
@@ -39,14 +39,14 @@ class PresetIdGenerator(IdGenerator):
     def generate_trace_id(self) -> int:
         if self.trace_id is not None:
             return self.trace_id
-        import random
-        return random.getrandbits(128)
+        import secrets
+        return secrets.randbits(128)
         
     def generate_span_id(self) -> int:
         if self.span_id is not None:
             return self.span_id
-        import random
-        return random.getrandbits(64)
+        import secrets
+        return secrets.randbits(64)
 
 def iso_to_nanos(iso_str):
     if not iso_str:
@@ -78,6 +78,7 @@ def extract_cli_state(input_data):
     used_percent = context_window.get("used_percentage") or 0.0
     workspace = input_data.get("workspace") or {}
     project_dir = workspace.get("project_dir", "")
+
 
     try:
         input_tokens = int(input_tokens)
@@ -310,14 +311,16 @@ def process_child_span_tool(tracer, parent_ctx, id_generator, step, i, steps, co
         context=parent_ctx,
         start_time=start_time
     )
+    stype_lower = stype.lower()
     tool_span.set_attribute("openinference.span.kind", "TOOL")
-    tool_span.set_attribute("tool.name", stype.lower())
+    tool_span.set_attribute("tool.name", stype_lower)
     tool_span.set_attribute("tool.output", scontent)
 
     tool_input = ""
     if last_planner_response:
         for tc in last_planner_response.get("tool_calls", []):
-            if tc.get("name") == stype.lower() or tc.get("name") == stype:
+            tc_name = tc.get("name")
+            if tc_name == stype_lower or tc_name == stype:
                 tool_input = json.dumps(tc.get("args", {}))
                 break
     tool_span.set_attribute("tool.input", tool_input)
@@ -380,7 +383,7 @@ def export_telemetry(steps, conversation_id, session_id, model_name, model_info,
                     tracer, parent_ctx, id_generator, step, i, steps, conversation_id,
                     trace_id_int, first_step_time, model_name, model_info, delta_input, delta_output, last_user_input
                 )
-        elif ssource == "MODEL" and stype not in ["PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"]:
+        elif ssource == "MODEL" and stype not in {"PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"}:
             if sindex is not None and sindex > last_sent_step:
                 process_child_span_tool(
                     tracer, parent_ctx, id_generator, step, i, steps, conversation_id,
@@ -487,7 +490,7 @@ def main():
         try:
             with open(cache_path, 'w') as cf:
                 json.dump(cache, cf)
-        except Exception:
+        except OSError:
             pass
 
     print(f"{status_str} ┃ 📡 telemetry: {telemetry_status}")
