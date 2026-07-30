@@ -400,14 +400,16 @@ def main():
                         context=parent_ctx,
                         start_time=start_time
                     )
+                    stype_lower = stype.lower()
                     tool_span.set_attribute("openinference.span.kind", "TOOL")
-                    tool_span.set_attribute("tool.name", stype.lower())
+                    tool_span.set_attribute("tool.name", stype_lower)
                     tool_span.set_attribute("tool.output", scontent)
                     
                     tool_input = ""
                     if last_planner_response:
                         for tc in last_planner_response.get("tool_calls", []):
-                            if tc.get("name") == stype.lower() or tc.get("name") == stype:
+                            tc_name = tc.get("name")
+                            if tc_name == stype_lower or tc_name == stype:
                                 tool_input = json.dumps(tc.get("args", {}))
                                 break
                     tool_span.set_attribute("tool.input", tool_input)
