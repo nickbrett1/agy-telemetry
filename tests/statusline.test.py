@@ -15,9 +15,9 @@ def test_preset_id_generator_preset_trace_id():
 
 def test_preset_id_generator_random_trace_id():
     generator = statusline.PresetIdGenerator()
-    with patch('random.getrandbits', return_value=987654321) as mock_getrandbits:
+    with patch('secrets.randbits', return_value=987654321) as mock_randbits:
         assert generator.generate_trace_id() == 987654321
-        mock_getrandbits.assert_called_once_with(128)
+        mock_randbits.assert_called_once_with(128)
 
 def test_preset_id_generator_preset_span_id():
     generator = statusline.PresetIdGenerator()
@@ -26,6 +26,6 @@ def test_preset_id_generator_preset_span_id():
 
 def test_preset_id_generator_random_span_id():
     generator = statusline.PresetIdGenerator()
-    with patch('random.getrandbits', return_value=123456789) as mock_getrandbits:
+    with patch('secrets.randbits', return_value=123456789) as mock_randbits:
         assert generator.generate_span_id() == 123456789
-        mock_getrandbits.assert_called_once_with(64)
+        mock_randbits.assert_called_once_with(64)
