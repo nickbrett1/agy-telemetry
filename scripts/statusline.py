@@ -375,7 +375,7 @@ def main():
                     if invocation_params:
                         try:
                             child_span.set_attribute("llm.invocation_parameters", json.dumps(invocation_params))
-                        except Exception:
+                        except TypeError:
                             pass
 
                     # Set error status if step failed
