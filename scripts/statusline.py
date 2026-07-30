@@ -16,7 +16,7 @@ if os.path.exists(lib_path) and lib_path not in sys.path:
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider, IdGenerator
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor, BatchSpanProcessor
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.trace import SpanContext, TraceFlags, NonRecordingSpan
