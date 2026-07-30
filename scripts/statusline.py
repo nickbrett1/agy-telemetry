@@ -384,7 +384,7 @@ def main():
 
                     child_span.end(end_time=stime)
                     
-            elif ssource == "MODEL" and stype not in ["PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"]:
+            elif ssource == "MODEL" and stype not in {"PLANNER_RESPONSE", "CHECKPOINT", "CONVERSATION_HISTORY"}:
                 if sindex > last_sent_step:
                     child_span_id_hex = hashlib.sha256(f"{conversation_id}_{sindex}".encode()).hexdigest()[:16]
                     child_span_id_int = int(child_span_id_hex, 16)
