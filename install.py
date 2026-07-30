@@ -87,11 +87,7 @@ def _install_dependencies(lib_path):
     return False
 
 
-def main():
-    print("Installing agy telemetry integration...")
-
-    # 1. Locate settings directory
-    home = os.path.expanduser("~")
+def _get_target_dir(home):
     cli_dir = os.path.join(home, ".gemini", "antigravity-cli")
     alt_dir = os.path.join(home, ".gemini", "antigravity")
 
@@ -102,10 +98,10 @@ def main():
     if not os.path.exists(target_dir):
         os.makedirs(target_dir, exist_ok=True)
 
-    settings_path = os.path.join(target_dir, "settings.json")
-    statusline_path = os.path.join(target_dir, "statusline.py")
+    return target_dir
 
-    # 2. Download statusline.py
+
+def _download_statusline(statusline_path):
     print(f"Downloading statusline script from {STATUSLINE_URL}...")
     downloaded = False
     try:
@@ -140,7 +136,8 @@ def main():
         print("Error: Could not download statusline script via urllib, curl, or wget.")
         sys.exit(1)
 
-    # 3. Configure settings.json
+
+def _configure_settings(settings_path, statusline_path, home):
     print(f"Configuring {settings_path}...")
     settings = {}
     if os.path.exists(settings_path):
@@ -175,10 +172,27 @@ def main():
         print(f"Error writing to settings.json: {e}")
         sys.exit(1)
 
+
+def main():
+    print("Installing agy telemetry integration...")
+
+    # 1. Locate settings directory
+    home = os.path.expanduser("~")
+    target_dir = _get_target_dir(home)
+    settings_path = os.path.join(target_dir, "settings.json")
+    statusline_path = os.path.join(target_dir, "statusline.py")
+
+    # 2. Download statusline.py
+    _download_statusline(statusline_path)
+
+    # 3. Configure settings.json
+    _configure_settings(settings_path, statusline_path, home)
+
     # 4. Install OpenTelemetry dependencies
     lib_path = os.path.join(target_dir, "telemetry_lib")
     deps_ok = _install_dependencies(lib_path)
 
+    python_bin = "python" if sys.platform == "win32" else "python3"
     if deps_ok:
         print("\nInstallation successful! 🎉")
         print("Telemetry is now configured to push traces to Arize Phoenix running on 'nas:6006'.")
