@@ -113,7 +113,7 @@ def main():
         try:
             with open(cache_path, 'r') as cf:
                 cache = json.load(cf)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             pass
             
     try:
