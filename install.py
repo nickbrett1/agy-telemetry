@@ -47,9 +47,7 @@ def _install_dependencies(lib_path):
     """
     Try several strategies to install dependencies, in order:
       1. pip install --target <lib_path>  (normal HTTPS)
-      2. pip install --target --index-url http://  (no SSL needed - for macOS with broken SSL)
-      3. pip install --user  (system-wide, normal HTTPS)
-      4. pip install --user --index-url http://  (no SSL needed)
+      2. pip install --user  (system-wide, normal HTTPS)
     Returns True if any strategy succeeded.
     """
     print(f"Installing OpenTelemetry dependencies to {lib_path}...")
@@ -58,40 +56,17 @@ def _install_dependencies(lib_path):
     if _pip_install(["--target", lib_path] + PACKAGES, "targeted"):
         return True
 
-    # Strategy 2: HTTP index (no SSL module required - common macOS fix when python3
-    # is the Xcode CLI tools version which has no SSL compiled in)
-    print("Standard install failed (likely SSL not available in this Python).")
-    print("Trying HTTP index URL as fallback (no SSL required)...")
-    http_flags = [
-        "--index-url", "http://pypi.org/simple/",
-        "--trusted-host", "pypi.org",
-        "--trusted-host", "files.pythonhosted.org",
-    ]
-    if _pip_install(["--target", lib_path] + http_flags + PACKAGES, "targeted + http index"):
-        return True
-
     print("Targeted install failed. Trying system-wide pip install --user...")
 
-    # Strategy 3: user install (no --target, goes to site-packages)
+    # Strategy 2: user install (no --target, goes to site-packages)
     if _pip_install(["--user"] + PACKAGES, "--user"):
-        print("  Note: packages installed to user site-packages. Telemetry will use system Python path.")
-        return True
-
-    print("Trying system-wide pip install --user with HTTP index...")
-
-    # Strategy 4: user install + HTTP index
-    if _pip_install(["--user"] + http_flags + PACKAGES, "--user + http index"):
         print("  Note: packages installed to user site-packages. Telemetry will use system Python path.")
         return True
 
     return False
 
 
-def main():
-    print("Installing agy telemetry integration...")
-
-    # 1. Locate settings directory
-    home = os.path.expanduser("~")
+def _get_target_directory(home):
     cli_dir = os.path.join(home, ".gemini", "antigravity-cli")
     alt_dir = os.path.join(home, ".gemini", "antigravity")
 
@@ -101,11 +76,10 @@ def main():
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir, exist_ok=True)
+    return target_dir
 
-    settings_path = os.path.join(target_dir, "settings.json")
-    statusline_path = os.path.join(target_dir, "statusline.py")
 
-    # 2. Download statusline.py
+def _download_statusline_script(statusline_path):
     print(f"Downloading statusline script from {STATUSLINE_URL}...")
     downloaded = False
     try:
@@ -140,7 +114,8 @@ def main():
         print("Error: Could not download statusline script via urllib, curl, or wget.")
         sys.exit(1)
 
-    # 3. Configure settings.json
+
+def _configure_settings(settings_path, statusline_path, home, python_bin):
     print(f"Configuring {settings_path}...")
     settings = {}
     if os.path.exists(settings_path):
@@ -150,12 +125,9 @@ def main():
         except Exception as e:
             print(f"Warning: Could not load existing settings.json ({e}). Creating a new one.")
 
-    # Set statusLine
-    python_bin = "python" if sys.platform == "win32" else "python3"
     if sys.platform == "win32":
         statusline_cmd_path = statusline_path.replace(os.sep, "/")
     else:
-        # Use ~ for home directory to ensure compatibility across different container users
         try:
             rel_path = os.path.relpath(statusline_path, home)
             statusline_cmd_path = f"~/{rel_path}".replace(os.sep, "/")
@@ -175,6 +147,23 @@ def main():
         print(f"Error writing to settings.json: {e}")
         sys.exit(1)
 
+
+def main():
+    print("Installing agy telemetry integration...")
+
+    # 1. Locate settings directory
+    home = os.path.expanduser("~")
+    target_dir = _get_target_directory(home)
+    settings_path = os.path.join(target_dir, "settings.json")
+    statusline_path = os.path.join(target_dir, "statusline.py")
+
+    # 2. Download statusline.py
+    _download_statusline_script(statusline_path)
+
+    # 3. Configure settings.json
+    python_bin = "python" if sys.platform == "win32" else "python3"
+    _configure_settings(settings_path, statusline_path, home, python_bin)
+
     # 4. Install OpenTelemetry dependencies
     lib_path = os.path.join(target_dir, "telemetry_lib")
     deps_ok = _install_dependencies(lib_path)
@@ -189,7 +178,6 @@ def main():
         print("   To fix, try one of the following commands manually:")
         print(f"     {python_bin} -m pip install --target {lib_path} opentelemetry-sdk opentelemetry-exporter-otlp")
         print(f"     {python_bin} -m pip install --user opentelemetry-sdk opentelemetry-exporter-otlp")
-        print("   If you see SSL errors, try adding: --trusted-host pypi.org --trusted-host files.pythonhosted.org")
         print("\n   The status line and settings.json have been configured — only telemetry export is affected.")
 
 
