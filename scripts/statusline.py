@@ -189,11 +189,6 @@ def main():
     # Clean the offline timestamp from the cache if it is online
     if "telemetry_offline_timestamp" in cache:
         del cache["telemetry_offline_timestamp"]
-        try:
-            with open(cache_path, 'w') as cf:
-                json.dump(cache, cf)
-        except Exception:
-            pass
 
     # Load transcript steps
     steps = []
