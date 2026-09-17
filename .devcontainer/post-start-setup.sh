@@ -22,4 +22,11 @@ fi
 
 
 
+echo "INFO: Checking the container agent..."
+if [ -x "/workspaces/agy-telemetry/scripts/agent-dev.sh" ]; then
+    "/workspaces/agy-telemetry/scripts/agent-dev.sh" start || true
+else
+    echo "WARN: scripts/agent-dev.sh not found, skipping the container agent"
+fi
+
 echo "INFO: Services check/startup complete."
